@@ -1,0 +1,120 @@
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <title>Cylinder tracker</title>
+  <script src="./js/jsQR.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://unpkg.com/spectre.css/dist/spectre.min.css">
+  <link rel="stylesheet" href="https://unpkg.com/spectre.css/dist/spectre-exp.min.css">
+  <link rel="stylesheet" href="https://unpkg.com/spectre.css/dist/spectre-icons.min.css">
+</head>
+
+<body>
+  <main class="container">
+    <h1>Cylinder Scan demo</h1>
+
+    <!-- <form> -->
+    <fieldset>
+      <div class="form-group">
+        <label class="form-label" for="depo">Depo name:</label>
+        <select class="form-select" id="depo">
+          <option value="1">Himal Oxygen</option>
+          <option value="2">Sagarmatha Oxygen</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="cylinder_sn" for="cylinders">Cylinder No(s):</label>
+        <ul id="cylinders"></ul>
+      </div>
+      <div class="form-group columns">
+        <div class="column col-2"><a class="btn btn-primary" onclick="scan()">Scan</a> </div>
+        <div class="column col-2"><a class="btn" onclick="cancelscan()">Cancel</a></div>
+      </div>
+      <div class="toast toast-success d-invisible" id="toast">Scan success</div>
+
+      <div class="form-group">
+        <a class="btn" type="submit" value="submit">Submit</a>
+      </div>
+      <div id="loadingMessage" hidden>🎥 Unable to access video stream (please make sure you have a webcam enabled)
+      </div>
+      <canvas id="canvas" hidden></canvas>
+    </fieldset>
+    <!-- </form> -->
+  </main>
+  <script>
+    var video = document.createElement("video");
+    var canvasElement = document.getElementById("canvas");
+    var canvas = canvasElement.getContext("2d");
+    var loadingMessage = document.getElementById("loadingMessage");
+    var cylinderList = document.getElementById("cylinders");
+    var toast = document.getElementById("toast");
+    var cancelframe;
+
+
+    function cancelscan() {
+      cancelAnimationFrame(cancelframe);
+      video.stop();
+      video.hidden = true;
+      canvasElement.hidden = true;
+    }
+
+    function scan() {
+      // Use facingMode: environment to attemt to get the front camera on phones
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }).then(function (stream) {
+        video.srcObject = stream;
+        video.setAttribute("playsinline", true); // required to tell iOS safari we don't want fullscreen
+        video.play();
+        requestAnimationFrame(tick);
+        toast.classList.add('d-invisible');
+      }).catch(() => { loadingMessage.hidden = false });
+    }
+
+    function tick() {
+      loadingMessage.hidden = false
+      loadingMessage.innerText = "⌛ Loading video..."
+      var decoded = null;
+      if (video.readyState === video.HAVE_ENOUGH_DATA) {
+        loadingMessage.hidden = true;
+        canvasElement.hidden = false;
+
+        canvasElement.height = video.videoHeight;
+        canvasElement.width = video.videoWidth;
+        canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
+        var imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
+        var code = jsQR(imageData.data, imageData.width, imageData.height, {
+          inversionAttempts: "dontInvert",
+        });
+        if (code) {
+          // drawLine(code.location.topLeftCorner, code.location.topRightCorner, "#FF3B58");
+          // drawLine(code.location.topRightCorner, code.location.bottomRightCorner, "#FF3B58");
+          // drawLine(code.location.bottomRightCorner, code.location.bottomLeftCorner, "#FF3B58");
+          // drawLine(code.location.bottomLeftCorner, code.location.topLeftCorner, "#FF3B58");
+          // outputMessage.hidden = true;
+          // outputData.parentElement.hidden = false;
+          // outputData.value = code.data;
+          var cyl = document.createElement('li');
+          cyl.innerHTML = code.data;
+          cylinderList.appendChild(cyl);
+          decoded = code.data;
+          toast.classList.remove('d-invisible');
+        } else {
+          // outputMessage.hidden = false;
+          // outputData.parentElement.hidden = true;
+        }
+      }
+      if (decoded) {
+        video.stop();
+        video.hidden = true;
+        canvasElement.hidden = true;
+
+        return decoded;
+
+      } else {
+        cancelframe = requestAnimationFrame(tick);
+      }
+    }
+  </script>
+</body>
+
+</html>
