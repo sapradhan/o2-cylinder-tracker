@@ -19,21 +19,24 @@
       <div class="form-group">
         <label class="form-label" for="depo">Depo name:</label>
         <select class="form-select" id="depo">
-          <option value="1">Himal Oxygen</option>
-          <option value="2">Sagarmatha Oxygen</option>
+          <option value="D-001-HIMAL">Himal Oxygen</option>
+          <option value="D-002-SAGARMATHA">Sagarmatha Oxygen</option>
         </select>
       </div>
       <div class="form-group columns">
         <div class="column col-1 col-sm-2"><a class="btn btn-primary" onclick="scan()">Scan</a> </div>
-        <div class="column col-2 col-sm-6"><div class="toast toast-success d-invisible" id="toast">Scan success</div></div>
+        <div class="column col-2 col-sm-6">
+          <div class="toast toast-success d-invisible" id="toast">Scan success</div>
+        </div>
       </div>
 
       <div class="form-group">
         <label for="cylinder_sn" for="cylinders">Cylinder No(s):</label>
-        <div id="cylinders"></div>
+        <div id="cylinders">
+        </div>
       </div>
       <div class="form-group">
-        <a class="btn" onclick="geolocation()" value="submit">Submit</a>
+        <a class="btn" onclick="submit()" value="submit">Submit</a>
       </div>
       <div id="canvasContainer" class="p-absolute" style="left:0; top:0" hidden>
 
@@ -99,9 +102,11 @@
           cyl.classList.add('chip');
           cyl.dataset.code = code.data;
           var geo = geolocation();
-          cyl.dataset.date = geo.time || Date.now();
+          cyl.dataset.time = geo.time || Date.now();
           cyl.dataset.lat = geo.lat || -1;
           cyl.dataset.long = geo.long || -1;
+          cyl.dataset.cylinderId = code.data;
+          cyl.dataset.location = document.getElementById("depo").value;
           cyl.innerHTML = code.data;
           cylinderList.appendChild(cyl);
           decoded = true;
@@ -120,15 +125,50 @@
         console.error('Geolocation is not supported by your browser');
       } else {
         var geo = {};
-        navigator.geolocation.getCurrentPosition((p) => { geo = {
-          'lat': p.coords.latitude,
-          'long': p.coords.longitude,
-          'time': p.timestamp
-        }; console.log(geo)},
+        navigator.geolocation.getCurrentPosition((p) => {
+          geo = {
+            'lat': p.coords.latitude,
+            'long': p.coords.longitude,
+            'time': p.timestamp
+          }; console.log(geo)
+        },
           () => console.error('Unable to retrieve your location'));
         return geo;
       }
     }
+
+    function submit() {
+      const body = Array.from(cylinderList.querySelectorAll('span')).map(n => ({
+        "lat": n.dataset.lat,
+        "long": n.dataset.long,
+        "cyl": n.dataset.cylinderId,
+        "location": n.dataset.location,
+        "time": n.dataset.time
+      }));
+
+      const req = new Request(
+        new URL(`cyls`, 'https://6kpe9ptx6k.execute-api.ap-south-1.amazonaws.com/').toString(),
+        {
+          method: 'POST',
+          headers: new Headers({
+            'Content-Type': 'application/json'
+          }),
+          body: body
+        }
+      );
+
+      fetch(req)
+        .then(res => {
+          if (res.status === 200) {
+            console.info('push successful');
+            // cleanup persisted entries
+          } else {
+            console.error('push failed');
+            // retry later
+          }
+        });
+    }
+
   </script>
 </body>
 
