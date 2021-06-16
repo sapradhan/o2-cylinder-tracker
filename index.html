@@ -151,7 +151,7 @@
           headers: new Headers({
             'Content-Type': 'application/json'
           }),
-          body: body
+          body: JSON.stringify(body)
         }
       );
 
@@ -159,6 +159,8 @@
         .then(res => {
           if (res.status === 200) {
             console.info('push successful');
+            let last;
+            while (last = cylinderList.lastChild) cylinderList.removeChild(last);
             // cleanup persisted entries
           } else {
             console.error('push failed');
